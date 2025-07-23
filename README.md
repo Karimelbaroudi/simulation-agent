@@ -1,28 +1,22 @@
-# simulation-agent
-Minimal property simulation engine using GPT-style output
-### main.py
-from prompt_builder import build_prompt
-from simulator import simulate_response
-from formatter import format_output
-from version import VERSION
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jul 23 22:51:27 2025
 
-def run_simulation(input_data):
-    prompt = build_prompt(input_data["scenario"], input_data["goal"], input_data["constraint"])
-    response = simulate_response(prompt)
-    return format_output(response)
+@ Author: karimelbaroudi
 
-if __name__ == "__main__":
-    input_data = {
-        "scenario": "£5.25M Knightsbridge townhouse unsold for 9 months",
-        "goal": "Secure offer within 60 days",
-        "constraint": "Do not reduce below £4.2M"
-    }
+Minimal Simulation Agent
+"""
 
-    print(f"Simulation Agent v{VERSION}")
-    print(run_simulation(input_data))
+import random
+import json
+import argparse
+import textwrap
 
+# --- version.py ---
+VERSION = "1.0.0"
 
-### prompt_builder.py
+# --- prompt_builder.py ---
 def build_prompt(scenario, goal, constraint):
     return f"""
 You are a strategic property agent simulator.
@@ -35,11 +29,10 @@ Please diagnose the situation, suggest 2–3 strategic actions to improve the ou
 Return the answer as JSON with keys: diagnosis, strategic_actions, simulation_score.
 """
 
-
-### simulator.py
-import random
-
+# --- simulator.py ---
 def simulate_response(prompt):
+    # In a real implementation, this would call OpenAI API with the prompt.
+    # Here we simulate a response:
     return {
         "diagnosis": "The current guide price exceeds buyer tolerance based on local liquidity compression.",
         "strategic_actions": [
@@ -50,73 +43,91 @@ def simulate_response(prompt):
         "simulation_score": round(random.uniform(0.7, 0.75), 2)
     }
 
-
-### formatter.py
-import json
-
+# --- formatter.py ---
 def format_output(response_dict):
     return json.dumps(response_dict, indent=2)
 
-
-### scorer.py
+# --- scorer.py ---
 def score_simulation(response):
     return response.get("simulation_score", 0.5)
 
+# --- memo_report.py ---
+def generate_memo(input_data, simulation):
+    diagnosis = simulation.get("diagnosis", "No diagnosis provided.")
+    actions = simulation.get("strategic_actions", [])
+    score = simulation.get("simulation_score", 0)
 
-### version.py
-VERSION = "1.0.0"
+    memo = f"""
+    Simulation Report Memo
+    ======================
 
+    Scenario:
+    {input_data['scenario']}
 
-### README.md
-# 🧐 Simulation Agent
+    Goal:
+    {input_data['goal']}
 
-This is a minimal simulation engine that processes structured real estate scenarios and generates GPT-style strategic output. Useful for quick diagnostics, seller strategy refinement, and offer probability forecasting.
+    Constraint:
+    {input_data['constraint']}
 
-## 📥 Input Format
+    Diagnosis:
+    {diagnosis}
 
-```python
-input_data = {
-  "scenario": "£5.25M Knightsbridge townhouse unsold for 9 months",
-  "goal": "Secure offer within 60 days",
-  "constraint": "Do not reduce below £4.2M"
-}
-```
+    Strategic Actions:
+    """
+    for i, action in enumerate(actions, 1):
+        memo += f"    {i}. {action}\n"
 
-## 📟 Output Example
+    memo += f"""
 
-```json
-{
-  "diagnosis": "The current guide price exceeds buyer tolerance based on local liquidity compression.",
-  "strategic_actions": [
-    "Reposition guide to £4.25M",
-    "Switch to performance-led agent within 14 days",
-    "Reframe marketing with withdrawn comp narrative"
-  ],
-  "simulation_score": 0.72
-}
-```
+    Forecast:
+    The likelihood of securing an offer within the specified constraints is estimated at {score*100:.0f}%.
+    This forecast considers local market conditions and buyer sensitivity to price.
 
-## 🚀 Run It
+    Commentary:
+    The seller's resistance to price reduction may limit buyer engagement.
+    Adopting a performance-led agent and reframing marketing messaging could shift buyer perception and improve offer probability.
+    """
 
-```bash
-python main.py
-```
+    # Clean indentation for display
+    memo = textwrap.dedent(memo).strip()
+    return memo
 
-## 📁 Folder Structure
+# --- main.py ---
+def run_simulation(input_data):
+    prompt = build_prompt(input_data["scenario"], input_data["goal"], input_data["constraint"])
+    simulation = simulate_response(prompt)
+    output_json = format_output(simulation)
+    return simulation, output_json
 
-```
-simulation_agent/
-├── main.py
-├── prompt_builder.py
-├── simulator.py
-├── formatter.py
-├── scorer.py
-├── version.py
-└── README.md
-```
+def main():
+    parser = argparse.ArgumentParser(description="Minimal Simulation Agent")
+    parser.add_argument("--scenario", type=str, default="£5.25M Knightsbridge townhouse unsold for 9 months",
+                        help="Property scenario description")
+    parser.add_argument("--goal", type=str, default="Secure offer within 60 days",
+                        help="Goal for the simulation")
+    parser.add_argument("--constraint", type=str, default="Do not reduce below £4.2M",
+                        help="Constraints to consider in the simulation")
 
-## 🔄 Future Ideas
+    args = parser.parse_args()
 
-- OpenAI API Integration
-- Streamlit front-end
-- CSV batch processor
+    input_data = {
+        "scenario": args.scenario,
+        "goal": args.goal,
+        "constraint": args.constraint
+    }
+
+    print(f"Simulation Agent v{VERSION}\n")
+
+    simulation, output_json = run_simulation(input_data)
+
+    print("Structured JSON Output:\n")
+    print(output_json)
+
+    print("\n" + "="*60 + "\n")
+
+    memo = generate_memo(input_data, simulation)
+    print(memo)
+
+if __name__ == "__main__":
+    main()
